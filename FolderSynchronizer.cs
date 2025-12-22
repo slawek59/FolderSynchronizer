@@ -13,8 +13,6 @@
 		{
 			/// TODO - handle exceptions: no source and invalid paths
 			/// TODO implement logger
-			/// TODO implement single responsibility
-			/// 
 
 
 			var sourceDirectoryInfo = new DirectoryInfo(_synchronizerInfo.SourcePath);
@@ -55,6 +53,7 @@
 
 				if (!Directory.Exists(pathToCreate))
 				{
+					Console.WriteLine($"Createing directory for: {pathToCreate}.");
 					Directory.CreateDirectory(pathToCreate);
 				}
 			}
@@ -68,8 +67,9 @@
 
 				if (!replicaFiles.ContainsKey(file.Key))
 				{
-					Console.WriteLine($"Creating directory for.");
-					Directory.CreateDirectory(Path.Combine(_synchronizerInfo.ReplicaPath, file.Value.Directory.Name));
+					var directoryToCreatePath = Path.Combine(_synchronizerInfo.ReplicaPath, file.Value.Directory.Name);
+					Console.WriteLine($"Creating directory for: {directoryToCreatePath}");
+					Directory.CreateDirectory(directoryToCreatePath);
 				}
 				if (!File.Exists(path))
 				{
@@ -88,6 +88,7 @@
 
 				if (!File.Exists(sourceFilePath))
 				{
+					Console.WriteLine($"Deleting file: {replicaFilePath}.");
 					File.Delete(replicaFilePath);
 				}
 			}
@@ -106,7 +107,9 @@
 
 				if (!doesDirectoryExistInSource && needsToBeDeleted)/// TODO delete after checking if dir in replica is empty
 				{
-					Directory.Delete(Path.Combine(_synchronizerInfo.ReplicaPath, directoryToDelete.FullName), true);
+					var directoryToDeletePath = Path.Combine(_synchronizerInfo.ReplicaPath, directoryToDelete.FullName);
+					Console.WriteLine($"Deleting directory: {directoryToDeletePath}.");
+					Directory.Delete(directoryToDeletePath, true);
 				}
 			}
 		}
@@ -120,7 +123,6 @@
 			var sourceFilePath = Path.Combine(file.Value.FullName);
 
 			Console.WriteLine($"Copying file: {file.Key} from {sourceFilePath} to {destFilePath}.");
-
 			File.Copy(sourceFilePath, destFilePath, true);/// TODO display whole path to console
 		}
 		/// TODO get logging from my framework - maybe - bro's version -> vid2-17:07
