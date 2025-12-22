@@ -6,23 +6,26 @@ namespace FolderSynchronizer
 	{
 		static void Main(string[] args)
 		{
-			LogManager.Initialize();
+			var synchronizerInfo = new SynchronizerInfo(args);
+			LogManager.Initialize(synchronizerInfo.LogFilePath);
 			Log.Information("Folder Synchronizer starts.");
 
 			Log.Information("Create SynchronizerInfo and load the config data.");
 
-			var synchronizerInfo = new SynchronizerInfo(args);
-
-			Log.Information("Get Sync Info from args");
 
 			var folderSynchronizer = new FolderSynchronizer(synchronizerInfo);
-			// SetupConfiguration() - sets up sync interval, source path, replica path, log path
-			// 1. define source directory
-			// 2. define targer directory
-			
+
 			///TODO maybe instead of delete + copy => use a renaming mathod
 
-			while (true)
+			var isRunning = true;
+
+			Console.CancelKeyPress += (s, e) =>
+			{
+				e.Cancel = true;
+				isRunning = false;
+			};
+
+			while (isRunning)
 			{
 				folderSynchronizer.Sync();
 
@@ -30,6 +33,8 @@ namespace FolderSynchronizer
 
 				Thread.Sleep(synchronizerInfo.SyncIntervalInSec);
 			}
+			
+			LogManager.Close();
 		}
 	}
 }

@@ -5,15 +5,12 @@ namespace FolderSynchronizer
 {
 	public static class LogManager
 	{
-		private static bool _isInitialized = false;
-
-		public static void Initialize()
+		public static void Initialize(string logPath)
 		{
-			if (_isInitialized) return;
 
 			string logLevelConfig = "Information";
 
-			string logDirectory = Path.Combine(Environment.CurrentDirectory, "Logs");
+			string logDirectory = logPath;
 
 			if (!Directory.Exists(logDirectory))
 			{
@@ -29,9 +26,6 @@ namespace FolderSynchronizer
 				.WriteTo.Console()
 				.WriteTo.File(logFilePath, rollingInterval: RollingInterval.Day)
 				.CreateLogger();
-
-			Log.Information("Logger initialized.");
-			_isInitialized = true;
 		}
 
 		public static void Close()
