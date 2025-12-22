@@ -1,4 +1,6 @@
-﻿namespace FolderSynchronizer
+﻿using Serilog;
+
+namespace FolderSynchronizer
 {
 	public class FolderSynchronizer
 	{
@@ -53,7 +55,7 @@
 
 				if (!Directory.Exists(pathToCreate))
 				{
-					Console.WriteLine($"Createing directory for: {pathToCreate}.");
+					Log.Information($"Createing directory for: {pathToCreate}.");
 					Directory.CreateDirectory(pathToCreate);
 				}
 			}
@@ -68,12 +70,15 @@
 				if (!replicaFiles.ContainsKey(file.Key))
 				{
 					var directoryToCreatePath = Path.Combine(_synchronizerInfo.ReplicaPath, file.Value.Directory.Name);
-					Console.WriteLine($"Creating directory for: {directoryToCreatePath}");
+
+					Log.Information($"Creating directory for: {directoryToCreatePath}");
+					
 					Directory.CreateDirectory(directoryToCreatePath);
 				}
 				if (!File.Exists(path))
 				{
-					Console.WriteLine($"Copying file: {file.Key}");
+					Log.Information($"Copying file: {file.Key}");
+
 					CopyFile(file, path);
 				}
 			}
@@ -88,7 +93,8 @@
 
 				if (!File.Exists(sourceFilePath))
 				{
-					Console.WriteLine($"Deleting file: {replicaFilePath}.");
+					Log.Information($"Deleting file: {replicaFilePath}.");
+
 					File.Delete(replicaFilePath);
 				}
 			}
@@ -108,7 +114,8 @@
 				if (!doesDirectoryExistInSource && needsToBeDeleted)/// TODO delete after checking if dir in replica is empty
 				{
 					var directoryToDeletePath = Path.Combine(_synchronizerInfo.ReplicaPath, directoryToDelete.FullName);
-					Console.WriteLine($"Deleting directory: {directoryToDeletePath}.");
+					Log.Information($"Deleting directory: {directoryToDeletePath}.");
+
 					Directory.Delete(directoryToDeletePath, true);
 				}
 			}
@@ -122,10 +129,10 @@
 			var destFilePath = Path.Combine(path);
 			var sourceFilePath = Path.Combine(file.Value.FullName);
 
-			Console.WriteLine($"Copying file: {file.Key} from {sourceFilePath} to {destFilePath}.");
-			File.Copy(sourceFilePath, destFilePath, true);/// TODO display whole path to console
+			Log.Information($"Copying file: {file.Key} from {sourceFilePath} to {destFilePath}.");
+
+			File.Copy(sourceFilePath, destFilePath, true);
 		}
-		/// TODO get logging from my framework - maybe - bro's version -> vid2-17:07
 	}
 }
 

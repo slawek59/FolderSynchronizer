@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FolderSynchronizer": {
+      "commandName": "Project",
+      "commandLineArgs": "\"C:\\Users\\wassl\\source\\repos\\FolderSynchronizer\\bin\\Debug\\net8.0\\fileSync\\source\" \"C:\\Users\\wassl\\source\\repos\\FolderSynchronizer\\bin\\Debug\\net8.0\\fileSync\\replica\" \"1000\""
+    }
+  }
+}

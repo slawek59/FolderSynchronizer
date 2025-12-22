@@ -1,21 +1,32 @@
-﻿namespace FolderSynchronizer
+﻿using Serilog;
+
+namespace FolderSynchronizer
 {
 	internal class Program
 	{
 		static void Main(string[] args)
 		{
-			Console.WriteLine("Folder Synchronizer starts.");
+			LogManager.Initialize();
+			Log.Information("Folder Synchronizer starts.");
+
 
 			/// TODO those values below will be provided via command line arguments
 			//var sourcePath = @"C:\Users\wassl\OneDrive\Pulpit\SLAWOMIR\MOJE\Dokumenty";
 			//var destPath = @"C:\Users\wassl\OneDrive\Pulpit\SLAWOMIR\MOJE\replica";
-			var sourcePath = @"C:\Users\wassl\source\repos\FolderSynchronizer\bin\Debug\net8.0\fileSync\source";
-			var destPath = @"C:\Users\wassl\source\repos\FolderSynchronizer\bin\Debug\net8.0\fileSync\replica";
-			var syncInterval = 1000;
+			//var sourcePath = @"C:\Users\wassl\source\repos\FolderSynchronizer\bin\Debug\net8.0\fileSync\source";
+			//var destPath = @"C:\Users\wassl\source\repos\FolderSynchronizer\bin\Debug\net8.0\fileSync\replica";
+			//var syncInterval = 1000;
 
-			Console.WriteLine("Create SynchronizerInfo");
+			var sourcePath = @$"{args[0]}";
+			var destPath = @$"{args[1]}";
+			var syncInterval = int.Parse(args[2]);
+
+			Log.Information("Create SynchronizerInfo");
+
 			var synchronizerInfo = new SynchronizerInfo(sourcePath, destPath, syncInterval);
-			Console.WriteLine("Get Sync Info from args");
+
+			Log.Information("Get Sync Info from args");
+
 			synchronizerInfo.GetSyncInfoFromArgs();
 
 			var folderSynchronizer = new FolderSynchronizer(synchronizerInfo);
@@ -46,7 +57,9 @@
 			while (true)
 			{
 				folderSynchronizer.Sync();
-				Console.WriteLine("next iteration");
+
+				Log.Information("next iteration");
+
 				Thread.Sleep(2000);
 			}
 
