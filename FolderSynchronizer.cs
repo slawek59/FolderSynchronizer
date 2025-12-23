@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using System.Security.Cryptography;
 
 namespace FolderSynchronizer
 {
@@ -13,21 +14,15 @@ namespace FolderSynchronizer
 
 		public void Sync()
 		{
-			/// TODO - handle exceptions: no source and invalid paths
-			
 			var sourceDirectoryInfo = new DirectoryInfo(_synchronizerInfo.SourcePath);
-
 			var replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
-
-			var sourcePath = _synchronizerInfo.SourcePath;
-			var replicaPath = _synchronizerInfo.ReplicaPath;
+			var sourcePath = _synchronizerInfo.SourcePath; var replicaPath = _synchronizerInfo.ReplicaPath;
 
 			if (!Directory.Exists(replicaPath))
 			{
 				Directory.CreateDirectory(replicaPath);
 			}
 
-			//extract method:
 			Dictionary<string, FileInfo> sourceFiles = sourceDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(
 				f => Path.GetRelativePath(sourcePath, f.FullName),
 				f => f);
@@ -40,49 +35,98 @@ namespace FolderSynchronizer
 			var allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
 
 			CopyAndUpdate(sourceFiles, replicaFiles, allSourceDirectories);
+			CreateEmptyDirectories(allSourceDirectories);
+
+			replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
+			//allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
+			replicaFiles = replicaDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(f => Path.GetRelativePath(replicaPath, f.FullName), f => f);
+
 			DeleteFiles(replicaFiles);
+
+			replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
+			//replicaFiles = replicaDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(f => Path.GetRelativePath(replicaPath, f.FullName), f => f);
+			allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
+
 			DeleteDirectories(allReplicaDirectories);
 		}
 		private void CopyAndUpdate(Dictionary<string, FileInfo> sourceFiles, Dictionary<string, FileInfo> replicaFiles, DirectoryInfo[] allSourceDirectories)
 		{
-			/// TODO question: abstract methods for copy dir | copy file OR leave it as it is
-			foreach (var directory in allSourceDirectories)
-			{
-				var directoryPath = directory.FullName.Substring(_synchronizerInfo.SourcePath.Length + 1);
-				var pathToCreate = Path.Combine(_synchronizerInfo.ReplicaPath, directoryPath);
-
-				if (!Directory.Exists(pathToCreate))
-				{
-					Log.Information($"Createing directory for: {pathToCreate}.");
-					Directory.CreateDirectory(pathToCreate);
-				}
-			}
-
-			///TODO - dir update should not delete and copy - dir may have files inside => dir should be just renamed
-
 			foreach (var file in sourceFiles)
 			{
+				var relativePath = file.Key;
+				var sourceFIle = file.Value;
 
-				var path = Path.Combine(_synchronizerInfo.ReplicaPath, file.Key);
-
-				if (!replicaFiles.ContainsKey(file.Key))
+				if (!sourceFIle.Exists)
 				{
-					var directoryToCreatePath = Path.Combine(_synchronizerInfo.ReplicaPath, file.Value.Directory.Name);
-
-					Log.Information($"Creating directory for: {directoryToCreatePath}");
-					
-					Directory.CreateDirectory(directoryToCreatePath);
+					Log.Warning($"Source file disappeared, skipping: {relativePath}");
+					continue;
 				}
-				if (!File.Exists(path))
-				{
-					Log.Information($"Copying file: {file.Key}");
 
-					CopyFile(file, path);
+				var replicaFilePath = Path.Combine(_synchronizerInfo.ReplicaPath, relativePath);
+
+				if (!replicaFiles.TryGetValue(relativePath, out var replicaFile))
+				{
+					Log.Information($"Copying file: {relativePath}");
+					CopyFile(sourceFIle, replicaFilePath);
+				}
+				else if (!CompareByChecksumAndSize(sourceFIle, replicaFile))
+				{
+					Log.Information($"Updating file: {relativePath}");
+					CopyFile(sourceFIle, replicaFilePath);
+				}
+			}
+		}
+		private void CopyFile(FileInfo sourceFile, string replicaFilePath)
+		{
+			try
+			{
+				var targetDirectory = Path.GetDirectoryName(replicaFilePath);
+
+				if (!sourceFile.Exists)
+				{
+					return;
+				}
+
+				if (!Directory.Exists(targetDirectory))
+				{
+					Log.Information($"Creating directory for: {targetDirectory}");
+
+					Directory.CreateDirectory(targetDirectory);
+				}
+
+				File.Copy(sourceFile.FullName, replicaFilePath, true);
+			}
+			catch (DirectoryNotFoundException ex)
+			{
+				Log.Warning($"Directory not found while copying: {sourceFile.FullName}. {ex.Message}");
+			}
+			catch (IOException ex)
+			{
+				Log.Warning($"IOException while copying: {sourceFile.FullName}. {ex.Message}");
+			}
+		}
+
+		private void CreateEmptyDirectories(DirectoryInfo[] allSourceDirectories)
+		{
+			foreach (var sourceDir in allSourceDirectories)
+			{
+				var relativePath = Path.GetRelativePath(
+					_synchronizerInfo.SourcePath,
+					sourceDir.FullName);
+
+				var replicaDirPath = Path.Combine(
+					_synchronizerInfo.ReplicaPath,
+					relativePath);
+
+				if (!Directory.Exists(replicaDirPath))
+				{
+					Log.Information($"Creating empty directory: {replicaDirPath}");
+					Directory.CreateDirectory(replicaDirPath);
 				}
 			}
 		}
 
-		//private void DeleteFiles(Dictionary<string, FileInfo> sourceFiles, Dictionary<string, FileInfo> replicaFiles)
+
 		private void DeleteFiles(Dictionary<string, FileInfo> replicaFiles)
 		{
 			foreach (var file in replicaFiles)
@@ -99,39 +143,57 @@ namespace FolderSynchronizer
 			}
 		}
 
-
-		//private void DeleteDirectories(DirectoryInfo[] allSourceDirectories, DirectoryInfo[] allReplicaDirectories)
 		private void DeleteDirectories(DirectoryInfo[] allReplicaDirectories)
 		{
-			foreach (var directoryToDelete in allReplicaDirectories)
+			foreach (var directoryToDelete in allReplicaDirectories.OrderByDescending(d => d.FullName.Length))
 			{
-				var relativePath = directoryToDelete.FullName.Substring(_synchronizerInfo.SourcePath.Length + 1);
-				var path = Path.Combine(_synchronizerInfo.SourcePath, relativePath.TrimStart(Path.DirectorySeparatorChar));
-
-				var doesDirectoryExistInSource = Directory.Exists(path);
+				var relativePath = Path.GetRelativePath(_synchronizerInfo.ReplicaPath, directoryToDelete.FullName);
+				var sourceDirPath = Path.Combine(_synchronizerInfo.SourcePath, relativePath);
 				var needsToBeDeleted = Directory.Exists(directoryToDelete.FullName);
 
-				if (!doesDirectoryExistInSource && needsToBeDeleted)/// TODO delete after checking if dir in replica is empty
+				try
 				{
-					var directoryToDeletePath = Path.Combine(_synchronizerInfo.ReplicaPath, directoryToDelete.FullName);
-					Log.Information($"Deleting directory: {directoryToDeletePath}.");
-
-					Directory.Delete(directoryToDeletePath, true);
+					if (!Directory.Exists(sourceDirPath) && needsToBeDeleted)
+					{
+						Log.Information($"Deleting directory: {directoryToDelete.FullName}");
+						Directory.Delete(directoryToDelete.FullName, true);
+					}
+				}
+				catch (Exception ex)
+				{
+					Log.Warning($"Could not delete the directory {ex.Message}.");
 				}
 			}
 		}
 
-		/// TODO it will also have to handle name change of a file -> now it creates a new file and deletes the old one (but it works xd)
-
-		private static void CopyFile(KeyValuePair<string, FileInfo> file, string path)
+		private static bool CompareByChecksumAndSize(FileInfo file1, FileInfo file2)
 		{
-			/// TODO implement copying only when the file does not exist or is different => use mechanisms / libraries that allow comparing files MD5? => program should not modify/copy files if source and replica have both the same files
-			var destFilePath = Path.Combine(path);
-			var sourceFilePath = Path.Combine(file.Value.FullName);
+			try
+			{
+				if (!file1.Exists || !file2.Exists)
+				{
+					return false;
+				}
 
-			Log.Information($"Copying file: {file.Key} from {sourceFilePath} to {destFilePath}.");
+				if (file1.Length != file2.Length)
+				{
+					return false;
+				}
 
-			File.Copy(sourceFilePath, destFilePath, true);
+				using var md5 = MD5.Create();
+				using var fileStream1 = file1.OpenRead();
+				using var fileStream2 = file2.OpenRead();
+
+				var hash1 = md5.ComputeHash(fileStream1);
+				var hash2 = md5.ComputeHash(fileStream2);
+
+				return hash1.SequenceEqual(hash2);
+
+			}
+			catch (IOException)
+			{
+				return false;
+			}
 		}
 	}
 }

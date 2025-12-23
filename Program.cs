@@ -12,10 +12,7 @@ namespace FolderSynchronizer
 
 			Log.Information("Create SynchronizerInfo and load the config data.");
 
-
 			var folderSynchronizer = new FolderSynchronizer(synchronizerInfo);
-
-			///TODO maybe instead of delete + copy => use a renaming mathod
 
 			var isRunning = true;
 
@@ -31,7 +28,7 @@ namespace FolderSynchronizer
 
 				Log.Information("scanning...");
 
-				Thread.Sleep(synchronizerInfo.SyncIntervalInSec);
+				Thread.Sleep(synchronizerInfo.SyncIntervalInMs);
 			}
 			
 			LogManager.Close();
