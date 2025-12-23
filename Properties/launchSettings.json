@@ -2,7 +2,7 @@
   "profiles": {
     "FolderSynchronizer": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\wassl\\source\\repos\\FolderSynchronizer\\bin\\Debug\\net8.0\\fileSync\\source\" \"C:\\Users\\wassl\\source\\repos\\FolderSynchronizer\\bin\\Debug\\net8.0\\fileSync\\replica\" \"C:\\Users\\wassl\\source\\repos\\FolderSynchronizer\\bin\\Debug\\net8.0\\Logs\" \"1000\""
+      "commandLineArgs": 
     }
   }
 }
