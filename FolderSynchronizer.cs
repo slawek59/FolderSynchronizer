@@ -1,5 +1,4 @@
 ﻿using Serilog;
-using System.Security.Cryptography;
 
 namespace FolderSynchronizer
 {
@@ -14,14 +13,16 @@ namespace FolderSynchronizer
 
 		public void Sync()
 		{
-			var sourceDirectoryInfo = new DirectoryInfo(_synchronizerInfo.SourcePath);
-			var replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
-			var sourcePath = _synchronizerInfo.SourcePath; var replicaPath = _synchronizerInfo.ReplicaPath;
+			var sourcePath = _synchronizerInfo.SourcePath; 
+			var replicaPath = _synchronizerInfo.ReplicaPath;
 
 			if (!Directory.Exists(replicaPath))
 			{
 				Directory.CreateDirectory(replicaPath);
 			}
+
+			var sourceDirectoryInfo = new DirectoryInfo(_synchronizerInfo.SourcePath);
+			var replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
 
 			Dictionary<string, FileInfo> sourceFiles = sourceDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(
 				f => Path.GetRelativePath(sourcePath, f.FullName),
@@ -38,17 +39,16 @@ namespace FolderSynchronizer
 			CreateEmptyDirectories(allSourceDirectories);
 
 			replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
-			//allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
 			replicaFiles = replicaDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(f => Path.GetRelativePath(replicaPath, f.FullName), f => f);
 
 			DeleteFiles(replicaFiles);
 
 			replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
-			//replicaFiles = replicaDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(f => Path.GetRelativePath(replicaPath, f.FullName), f => f);
 			allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
 
 			DeleteDirectories(allReplicaDirectories);
 		}
+
 		private void CopyAndUpdate(Dictionary<string, FileInfo> sourceFiles, Dictionary<string, FileInfo> replicaFiles, DirectoryInfo[] allSourceDirectories)
 		{
 			foreach (var file in sourceFiles)
@@ -69,13 +69,14 @@ namespace FolderSynchronizer
 					Log.Information($"Copying file: {relativePath}");
 					CopyFile(sourceFIle, replicaFilePath);
 				}
-				else if (!CompareByChecksumAndSize(sourceFIle, replicaFile))
+				else if (!FileComparer.AreFilesSame(sourceFIle, replicaFile))
 				{
 					Log.Information($"Updating file: {relativePath}");
 					CopyFile(sourceFIle, replicaFilePath);
 				}
 			}
 		}
+
 		private void CopyFile(FileInfo sourceFile, string replicaFilePath)
 		{
 			try
@@ -126,7 +127,6 @@ namespace FolderSynchronizer
 			}
 		}
 
-
 		private void DeleteFiles(Dictionary<string, FileInfo> replicaFiles)
 		{
 			foreach (var file in replicaFiles)
@@ -136,9 +136,15 @@ namespace FolderSynchronizer
 
 				if (!File.Exists(sourceFilePath))
 				{
-					Log.Information($"Deleting file: {replicaFilePath}.");
-
-					File.Delete(replicaFilePath);
+					try
+					{
+						Log.Information($"Deleting file: {replicaFilePath}.");
+						File.Delete(replicaFilePath);
+					}
+					catch (IOException ex)
+					{
+						Log.Warning($"IOException while deleting: {ex.Message}");
+					}
 				}
 			}
 		}
@@ -163,36 +169,6 @@ namespace FolderSynchronizer
 				{
 					Log.Warning($"Could not delete the directory {ex.Message}.");
 				}
-			}
-		}
-
-		private static bool CompareByChecksumAndSize(FileInfo file1, FileInfo file2)
-		{
-			try
-			{
-				if (!file1.Exists || !file2.Exists)
-				{
-					return false;
-				}
-
-				if (file1.Length != file2.Length)
-				{
-					return false;
-				}
-
-				using var md5 = MD5.Create();
-				using var fileStream1 = file1.OpenRead();
-				using var fileStream2 = file2.OpenRead();
-
-				var hash1 = md5.ComputeHash(fileStream1);
-				var hash2 = md5.ComputeHash(fileStream2);
-
-				return hash1.SequenceEqual(hash2);
-
-			}
-			catch (IOException)
-			{
-				return false;
 			}
 		}
 	}
