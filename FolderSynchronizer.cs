@@ -13,7 +13,7 @@ namespace FolderSynchronizer
 
 		public void Sync()
 		{
-			var sourcePath = _synchronizerInfo.SourcePath; 
+			var sourcePath = _synchronizerInfo.SourcePath;
 			var replicaPath = _synchronizerInfo.ReplicaPath;
 
 			if (!Directory.Exists(replicaPath))
@@ -21,32 +21,20 @@ namespace FolderSynchronizer
 				Directory.CreateDirectory(replicaPath);
 			}
 
-			var sourceDirectoryInfo = new DirectoryInfo(_synchronizerInfo.SourcePath);
-			var replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
+			var scanner = new Scanner();
 
-			Dictionary<string, FileInfo> sourceFiles = sourceDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(
-				f => Path.GetRelativePath(sourcePath, f.FullName),
-				f => f);
+			var scanResult = scanner.Scan(_synchronizerInfo);
 
-			Dictionary<string, FileInfo> replicaFiles = replicaDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(
-				f => Path.GetRelativePath(replicaPath, f.FullName),
-				f => f);
+			CopyAndUpdate(scanResult.SourceFiles, scanResult.ReplicaFiles, scanResult.AllSourceDirectories);
+			CreateEmptyDirectories(scanResult.AllSourceDirectories);
 
-			var allSourceDirectories = sourceDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
-			var allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
+			scanResult = scanner.Scan(_synchronizerInfo);
 
-			CopyAndUpdate(sourceFiles, replicaFiles, allSourceDirectories);
-			CreateEmptyDirectories(allSourceDirectories);
+			DeleteFiles(scanResult.ReplicaFiles);
 
-			replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
-			replicaFiles = replicaDirectoryInfo.GetFiles("*", SearchOption.AllDirectories).ToDictionary(f => Path.GetRelativePath(replicaPath, f.FullName), f => f);
+			scanResult = scanner.Scan(_synchronizerInfo);
 
-			DeleteFiles(replicaFiles);
-
-			replicaDirectoryInfo = new DirectoryInfo(_synchronizerInfo.ReplicaPath);
-			allReplicaDirectories = replicaDirectoryInfo.GetDirectories("*", SearchOption.AllDirectories);
-
-			DeleteDirectories(allReplicaDirectories);
+			DeleteDirectories(scanResult.AllReplicaDirectories);
 		}
 
 		private void CopyAndUpdate(Dictionary<string, FileInfo> sourceFiles, Dictionary<string, FileInfo> replicaFiles, DirectoryInfo[] allSourceDirectories)
