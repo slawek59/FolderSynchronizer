@@ -1,6 +1,8 @@
-﻿using Serilog;
+﻿using FolderSynchronizer.Models;
+using FolderSynchronizer.Utilities;
+using Serilog;
 
-namespace FolderSynchronizer
+namespace FolderSynchronizer.Core
 {
 	public class FolderSynchronizer
 	{

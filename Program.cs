@@ -1,4 +1,6 @@
-﻿using Serilog;
+﻿using FolderSynchronizer.Logging;
+using FolderSynchronizer.Models;
+using Serilog;
 
 namespace FolderSynchronizer
 {
@@ -12,7 +14,7 @@ namespace FolderSynchronizer
 
 			Log.Information("Create SynchronizerInfo and load the config data.");
 
-			var folderSynchronizer = new FolderSynchronizer(synchronizerInfo);
+			var folderSynchronizer = new Core.FolderSynchronizer(synchronizerInfo);
 
 			var isRunning = true;
 

@@ -1,4 +1,6 @@
-﻿namespace FolderSynchronizer
+﻿using FolderSynchronizer.Models;
+
+namespace FolderSynchronizer.Core
 {
 	public class Scanner
 	{

@@ -1,6 +1,6 @@
 ﻿using System.Security.Cryptography;
 
-namespace FolderSynchronizer
+namespace FolderSynchronizer.Utilities
 {
 	public static class FileComparer
 	{

@@ -1,7 +1,7 @@
 ﻿using Serilog;
 using Serilog.Events;
 
-namespace FolderSynchronizer
+namespace FolderSynchronizer.Logging
 {
 	public static class LogManager
 	{

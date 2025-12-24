@@ -1,4 +1,4 @@
-﻿namespace FolderSynchronizer
+﻿namespace FolderSynchronizer.Models
 {
 	public class SynchronizerInfo
 	{
